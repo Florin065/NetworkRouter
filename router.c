@@ -160,23 +160,17 @@ void arp_req() {
 
 	// Set the headers
 	struct ether_header *ethh = (struct ether_header *)  buf;
-	struct 	 arp_header *arph = (struct   arp_header *) (ethh
-														 +
-														 sizeof(struct ether_header));
+	struct arp_header *arph = (struct arp_header *) (ethh + sizeof(struct ether_header));
 
 	// Set the length
-	size_t len = sizeof(struct ether_header)
-				 +
-				 sizeof(struct arp_header);
+	size_t len = sizeof(struct ether_header) + sizeof(struct arp_header);
 
 	
 	// Set the destination MAC address to broadcast
 	uint8_t *dest = calloc(SIX, sizeof(uint8_t));
 	memset(dest, 0xFF, SIX * sizeof(uint8_t));
 
-	memmove(ethh->ether_dhost,
-		   	dest,
-		   	SIX * sizeof(uint8_t));
+	memmove(ethh->ether_dhost, dest, SIX * sizeof(uint8_t));
 
 	// Set the source MAC address to the interface MAC address
 	get_interface_mac(route->interface, ethh->ether_shost);
@@ -205,100 +199,72 @@ void arp_req() {
 	// Set the sender IP address to the interface IP address
 	arph->spa = inet_addr(get_interface_ip(route->interface));
 
-	memmove(arph->tha,
-		    dest,
-			SIX * sizeof(uint8_t));
+	memmove(arph->tha, dest, SIX * sizeof(uint8_t));
 
 	// Set the target IP address to the destination IP address
 	arph->tpa = route->next_hop;
 
 	// Copy the headers to the packet
-	memmove(buf,
-			ethh,
-			sizeof(struct ether_header));
-	memmove(buf + sizeof(struct ether_header),
-			arph,
-			sizeof(struct arp_header));
+	memmove(buf, ethh, sizeof(struct ether_header));
+	memmove(buf + sizeof(struct ether_header), arph, sizeof(struct arp_header));
 
 	// Send the packet
 	send_to_link(route->interface, buf, len);
 }
 
-int arp(int interface,
-		char buf[MAX_PACKET_LEN],
-		size_t len) {
+int arp(int interface, char buf[MAX_PACKET_LEN], size_t len) {
 	if (ntohs(arp_hdr->op) == ARP_OP_REQUEST) {
 		arp_hdr->op = htons(ARP_OP_REPLY);
 
-		memmove(arp_hdr->tha,
-			   	arp_hdr->sha,
-			   	sizeof(arp_hdr->sha));
+		memmove(arp_hdr->tha, arp_hdr->sha, sizeof(arp_hdr->sha));
 
 		uint8_t temp[SIX * sizeof(uint8_t)];
 		get_interface_mac(interface, temp);
-		memmove(arp_hdr->sha,
-			   	temp,
-			   	sizeof(arp_hdr->sha));
+		memmove(arp_hdr->sha, temp, sizeof(arp_hdr->sha));
 
 		arp_hdr->tpa = arp_hdr->spa;
 		arp_hdr->spa = inet_addr(get_interface_ip(interface));
 
-		memmove(eth_hdr->ether_dhost,
-			   	arp_hdr->tha,
-			   	SIX * sizeof(uint8_t));
+		memmove(eth_hdr->ether_dhost, arp_hdr->tha, SIX * sizeof(uint8_t));
 		get_interface_mac(interface, eth_hdr->ether_shost);
 
 		send_to_link(interface, buf, len);
 	}
-	else if (ntohs(arp_hdr->op == ARP_OP_REPLY)) {
-		
-
-		return DROP_PACKAGE;
-	}
+	else if (ntohs(arp_hdr->op == ARP_OP_REPLY)) return DROP_PACKAGE;
 
 	return DROP_PACKAGE;
 }
 
 void icmp(int interface, int type,
-		  char buf[MAX_PACKET_LEN]) {
-	size_t len 			= 	sizeof(struct ether_header)
-						  + sizeof(struct iphdr)
-						  + sizeof(struct icmphdr);
+	char buf[MAX_PACKET_LEN]) {
+	size_t len = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct icmphdr);
 
 	u_int8_t temp[SIX * sizeof(uint8_t)];
-	memmove(temp,
-		   	eth_hdr->ether_dhost,
-		   	sizeof(eth_hdr->ether_dhost));
-	memmove(eth_hdr->ether_dhost,
-		   	eth_hdr->ether_shost,
-		   	sizeof(eth_hdr->ether_shost));
-	memmove(eth_hdr->ether_shost,
-		   	temp,
-		   	sizeof(temp));
+	memmove(temp, eth_hdr->ether_dhost, sizeof(eth_hdr->ether_dhost));
+	memmove(eth_hdr->ether_dhost, eth_hdr->ether_shost, sizeof(eth_hdr->ether_shost));
+	memmove(eth_hdr->ether_shost, temp, sizeof(temp));
 	eth_hdr->ether_type = htons(IPV4);
 
-	uint32_t aux 		= ip_hdr->saddr; 
-	ip_hdr->saddr 		= ip_hdr->daddr;
-	ip_hdr->daddr 		= aux;
-	ip_hdr->version 	= FOUR;
-	ip_hdr->ihl 		= FIVE;
-	ip_hdr->tos 		= ZERO;
-	ip_hdr->tot_len 	= htons(sizeof(struct iphdr) + sizeof(struct icmphdr));
-	ip_hdr->id 			= ONE;
-	ip_hdr->frag_off 	= ZERO;
-	ip_hdr->ttl 		= SIXTYFOUR;
-	ip_hdr->protocol 	= IPPROTO_ICMP;
-	ip_hdr->check 		= ZERO;
-	ip_hdr->check 		= htons(checksum((void *) ip_hdr, sizeof(struct iphdr)));
+	uint32_t aux = ip_hdr->saddr; 
+	ip_hdr->saddr = ip_hdr->daddr;
+	ip_hdr->daddr = aux;
+	ip_hdr->version = FOUR;
+	ip_hdr->ihl = FIVE;
+	ip_hdr->tos = ZERO;
+	ip_hdr->tot_len = htons(sizeof(struct iphdr) + sizeof(struct icmphdr));
+	ip_hdr->id = ONE;
+	ip_hdr->frag_off = ZERO;
+	ip_hdr->ttl = SIXTYFOUR;
+	ip_hdr->protocol = IPPROTO_ICMP;
+	ip_hdr->check = ZERO;
+	ip_hdr->check = htons(checksum((void *) ip_hdr, sizeof(struct iphdr)));
 
-	icmp_hdr->code 		= ZERO;
-	icmp_hdr->type 		= type;
-	icmp_hdr->checksum 	= ZERO;
-	icmp_hdr->checksum 	= htons(checksum((void *) icmp_hdr, sizeof(struct icmphdr)));
+	icmp_hdr->code = ZERO;
+	icmp_hdr->type = type;
+	icmp_hdr->checksum = ZERO;
+	icmp_hdr->checksum = htons(checksum((void *) icmp_hdr, sizeof(struct icmphdr)));
 
-    memmove(eth_hdr->ether_dhost,
-		   	mac->mac,
-		   	sizeof(mac->mac));
+    memmove(eth_hdr->ether_dhost, mac->mac, sizeof(mac->mac));
 
 	send_to_link(interface, buf, len);
 }
@@ -311,16 +277,16 @@ int main(int argc, char *argv[])
 	init(argc - TWO, argv + TWO);
 
 	/* Code to allocate the MAC/ARP and route tables */
-	rtable 		  	= calloc(RTABLE_MAX_SIZE, sizeof(struct route_table_entry));
+	rtable = calloc(RTABLE_MAX_SIZE, sizeof(struct route_table_entry));
 	/* DIE is a macro for sanity checks */
-	DIE(!rtable, 	"Failed to allocate memory for routing table.");
+	DIE(!rtable, "Failed to allocate memory for routing table.");
 
-	arp_table 	  	= calloc(ARP_TABLE_MAX_SIZE, sizeof(struct arp_entry));
+	arp_table = calloc(ARP_TABLE_MAX_SIZE, sizeof(struct arp_entry));
 	DIE(!arp_table, "Failed to allocate memory for routing table.");
 	
 	/* Read the static routing table and the MAC table */
-	rtable_len 	  	= read_rtable(argv[ONE], rtable);
-	arp_table_len 	= parse_arp_table("arp_table.txt", arp_table);
+	rtable_len = read_rtable(argv[ONE], rtable);
+	arp_table_len = parse_arp_table("arp_table.txt", arp_table);
 
 	q = queue_create();
 
@@ -329,14 +295,13 @@ receive_loop:
 	int interface;
 	size_t len;
 
-	interface 		= recv_from_any_link(buf, &len);
+	interface = recv_from_any_link(buf, &len);
 	DIE(interface < ZERO, "recv_from_any_links");
 
-	 eth_hdr 		= (struct ether_header *)  buf;
-	  ip_hdr 		= (struct 		 iphdr *) (buf + sizeof(struct ether_header));
-	icmp_hdr 		= (struct 	   icmphdr *) (buf + sizeof(struct ether_header)
-											  	   + sizeof(struct 	      iphdr));
-	 arp_hdr 		= (struct 	arp_header *) (buf + sizeof(struct ether_header));
+	eth_hdr = (struct ether_header *)  buf;
+	ip_hdr = (struct iphdr *) (buf + sizeof(struct ether_header));
+	icmp_hdr = (struct icmphdr *) (buf + sizeof(struct ether_header) + sizeof(struct iphdr));
+	arp_hdr = (struct arp_header *) (buf + sizeof(struct ether_header));
 
 	//Find best matching route
 	route = get_best_route(ip_hdr->daddr);
